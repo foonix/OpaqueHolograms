@@ -34,7 +34,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
     float4 _Tint;
     TEXTURE2D(_LinesTexture);
     SAMPLER(sampler_LinesTexture);
-    float3 _LinesScale;
+    float4x4 _EffectOrientation;
     TEXTURE2D_X(_HologramObjectBuffer);
     TEXTURE2D_X(_HologramObjectBufferDepth);
 
@@ -57,8 +57,9 @@ Shader "OpaqueHolograms/ApplyToCamera"
 
         // position information for the opaque fragment in the hologram buffer.
         PositionInputs holoBufferPosInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, holoDepth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
-
-        float4 linesTexel = SAMPLE_TEXTURE2D_LOD(_LinesTexture, sampler_LinesTexture, GetAbsolutePositionWS(holoBufferPosInput.positionWS * _LinesScale.xyz).xy, 0);
+        // actual world space version
+        float2 linesUV = mul(_EffectOrientation, GetAbsolutePositionWS(holoBufferPosInput.positionWS)).xy;
+        float4 linesTexel = SAMPLE_TEXTURE2D_LOD(_LinesTexture, sampler_LinesTexture, linesUV, 0);
         
         // alpha blending is used to determine if we use more of the custom pass buffer or more of the camera buffer for the fragment.
         // the alpha buffer is 1 where opaque was rendered and 0 where nothing was rendered
@@ -86,8 +87,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
     Properties
     {
         [HDR] _Tint("Color Multiplier", Color) = (.25, .5, .5, 1)
-        _LinesTexture("Hologram Lines", 2D) =  "white" {} 
-        _LinesScale("Hologram Lines Scale", Vector) = (1,1,0,0)
+        _LinesTexture("Hologram Lines", 2D) =  "white" {}
     }
 
     SubShader

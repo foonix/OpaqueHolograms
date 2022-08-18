@@ -16,6 +16,8 @@ class OpaqueHologramPass : CustomPass
     public GraphicsFormat colorBufferFormat = GraphicsFormat.B10G11R11_UFloatPack32;
     public DepthBits depthBits = DepthBits.Depth24;
     public Material hologramMaterial;
+    public Quaternion effectRotation = Quaternion.identity;
+    public Vector3 effectScale = Vector3.one;
 
     RTHandle holoObjectBuffer;
     RTHandle holoObjectBufferDepth;
@@ -54,10 +56,13 @@ class OpaqueHologramPass : CustomPass
             }
         );
 
+        var orientation = Matrix4x4.TRS(Vector3.zero, effectRotation, effectScale);
+
         // Set up effect properties
         var properties = new MaterialPropertyBlock();
         properties.SetTexture("_HologramObjectBuffer", holoObjectBuffer);
         properties.SetTexture("_HologramObjectBufferDepth", holoObjectBufferDepth);
+        properties.SetMatrix("_EffectOrientation", orientation);
 
         // Apply the buffer contents to the screen, doing the hologram effect at the same time.
         CoreUtils.SetRenderTarget(ctx.cmd, ctx.cameraColorBuffer, ctx.cameraDepthBuffer, ClearFlag.None);
