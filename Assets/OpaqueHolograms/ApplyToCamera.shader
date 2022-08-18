@@ -32,11 +32,11 @@ Shader "OpaqueHolograms/ApplyToCamera"
     // you can check them out in the source code of the core SRP package.
 
     float4 _Tint;
-    sampler2D _LinesTexture;
-    float2 _LinesScale;
+    TEXTURE2D(_LinesTexture);
+    SAMPLER(sampler_LinesTexture);
+    float3 _LinesScale;
     TEXTURE2D_X(_HologramObjectBuffer);
     TEXTURE2D_X(_HologramObjectBufferDepth);
-    
 
     float4 FullScreenPass(Varyings varyings) : SV_Target
     {
@@ -50,29 +50,30 @@ Shader "OpaqueHolograms/ApplyToCamera"
         if (_CustomPassInjectionPoint != CUSTOMPASSINJECTIONPOINT_BEFORE_RENDERING)
             color = float4(CustomPassLoadCameraColor(varyings.positionCS.xy, 0), 1);
 
-
         // When sampling RTHandle texture, always use _RTHandleScale.xy to scale your UVs first.
         float2 uv = posInput.positionNDC.xy * _RTHandleScale.xy;
         float4 holoObjColor = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectBuffer, s_linear_clamp_sampler, uv, 0);
-        holoObjColor.a = 0;
-        float holoDepth = LOAD_TEXTURE2D_X_LOD(_HologramObjectBufferDepth, uv, 0).r;
+        float holoDepth = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectBufferDepth, s_linear_clamp_sampler, uv, 0).r;
 
-        // posInput.positionWS is camera relative and uses the camera depth buffer.
-        // Here I want the position in world space and relative to the hologram render buffer's depth.
-        float3 holoBufferWS = GetAbsolutePositionWS(ComputeWorldSpacePosition(posInput.positionNDC, holoDepth, UNITY_MATRIX_I_VP));
+        // position information for the opaque fragment in the hologram buffer.
+        PositionInputs holoBufferPosInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, holoDepth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
 
-        float4 linesTexel = tex2D(_LinesTexture, holoBufferWS.xy * _LinesScale.xy);
+        float4 linesTexel = SAMPLE_TEXTURE2D_LOD(_LinesTexture, sampler_LinesTexture, GetAbsolutePositionWS(holoBufferPosInput.positionWS * _LinesScale.xyz).xy, 0);
         
         // alpha blending is used to determine if we use more of the custom pass buffer or more of the camera buffer for the fragment.
         // the alpha buffer is 1 where opaque was rendered and 0 where nothing was rendered
-        holoObjColor.a = linesTexel.r;
-        holoObjColor *= _Tint;
+        holoObjColor *= linesTexel * _Tint ;
 
         // Depth test so that objects in the camera target are not occluded by the hologram.
-        if(holoDepth > depth)
+        if(holoDepth <= depth)
         {
             holoObjColor = float4(0,0,0,0);
         }
+        //else
+        //{
+        //    // debug dump stuff to red channel
+        //    holoObjColor = float4(linesTexel * _LinesScale.x, 0, 0, holoObjColor.a);
+        //}
 
         // Fade value allow you to increase the strength of the effect while the camera gets closer to the custom pass volume
         //float f = 1 - abs(_FadeValue * 2 - 1);
@@ -96,10 +97,8 @@ Shader "OpaqueHolograms/ApplyToCamera"
             Name "Custom Pass 0"
 
             ZWrite Off
-            ZTest Always
-            //BlendOp Mult
-            Blend One One
-            //Blend One OneMinusSrcAlpha
+            ZTest Off
+            Blend SrcAlpha OneMinusSrcAlpha
             Cull Off
 
             HLSLPROGRAM

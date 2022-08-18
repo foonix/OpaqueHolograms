@@ -15,35 +15,22 @@ class OpaqueHologramPass : CustomPass
     [ColorUsage(true, true)] public Color tint = Color.white;
     public GraphicsFormat colorBufferFormat = GraphicsFormat.B10G11R11_UFloatPack32;
     public DepthBits depthBits = DepthBits.Depth24;
+    public Material hologramMaterial;
 
-    private Shader applyToCamera;
-    Material toCamera;
     RTHandle holoObjectBuffer;
     RTHandle holoObjectBufferDepth;
 
-    // It can be used to configure render targets and their clear state. Also to create temporary render target textures.
-    // When empty this render pass will render to the active camera render target.
-    // You should never call CommandBuffer.SetRenderTarget. Instead call <c>ConfigureTarget</c> and <c>ConfigureClear</c>.
-    // The render pipeline will ensure target setup and clearing happens in an performance manner.
     protected override void Setup(ScriptableRenderContext renderContext, CommandBuffer cmd)
     {
-        applyToCamera = Shader.Find("OpaqueHolograms/ApplyToCamera");
-
-        toCamera = CoreUtils.CreateEngineMaterial(applyToCamera);
-
-        // Define the outline buffer
         holoObjectBuffer = RTHandles.Alloc(
             Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
-            //colorFormat: GraphicsFormat.B10G11R11_UFloatPack32,
             colorFormat: colorBufferFormat,
-            //colorFormat: GraphicsFormat.R32G32B32A32_SFloat,
-            //depthBufferBits: depthBits,
             useDynamicScale: true, name: "Hologram Object Buffer"
 
         );
         holoObjectBufferDepth = RTHandles.Alloc(
             Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
-            //colorFormat: GraphicsFormat.R16_UInt,
+            colorFormat: GraphicsFormat.R32_SFloat,
             depthBufferBits: depthBits,
             useDynamicScale: true, name: "Hologram Object Buffer Depth"
         );
@@ -58,35 +45,27 @@ class OpaqueHologramPass : CustomPass
 
     protected override void Execute(CustomPassContext ctx)
     {
-        // Render meshes we want to apply the outline effect to in the outline buffer
-        //CoreUtils.SetRenderTarget(ctx.cmd, holoObjectBuffer, holoObjectBufferDepth, ClearFlag.Color | ClearFlag.Depth, clearColor: new Color(0,0,0,0));
+        // Draw objects to the buffer
         CoreUtils.SetRenderTarget(ctx.cmd, holoObjectBuffer, holoObjectBufferDepth, ClearFlag.All);
-        //CustomPassUtils.DrawRenderers(ctx, new ShaderTagId[] { new("ForwardOnly") }, hologramObjectLayers, RenderQueueType.All);
-        //CustomPassUtils.DrawRenderers(ctx, hologramObjectLayers/*, RenderQueueType.AllOpaque*/);
         CustomPassUtils.DrawRenderers(ctx, hologramObjectLayers,
             overrideRenderState: new RenderStateBlock(RenderStateMask.Depth)
             {
-                depthState = new DepthState(true, CompareFunction.Less)
+                depthState = new DepthState(true, CompareFunction.LessEqual),
             }
         );
 
-        // Set up outline effect properties
-        //ctx.propertyBlock.SetColor("_OutlineColor", outlineColor);
-        //ctx.propertyBlock.SetTexture("_OutlineBuffer", outlineBuffer);
-        //ctx.propertyBlock.SetFloat("_Threshold", threshold);
+        // Set up effect properties
+        var properties = new MaterialPropertyBlock();
+        properties.SetTexture("_HologramObjectBuffer", holoObjectBuffer);
+        properties.SetTexture("_HologramObjectBufferDepth", holoObjectBufferDepth);
 
-        ctx.propertyBlock.SetColor("_Tint", tint);
-        ctx.propertyBlock.SetTexture("_HologramObjectBuffer", holoObjectBuffer);
-        ctx.propertyBlock.SetTexture("_HologramObjectBufferDepth", holoObjectBufferDepth);
-
-        // Render the outline buffer fullscreen
+        // Apply the buffer contents to the screen, doing the hologram effect at the same time.
         CoreUtils.SetRenderTarget(ctx.cmd, ctx.cameraColorBuffer, ctx.cameraDepthBuffer, ClearFlag.None);
-        CoreUtils.DrawFullScreen(ctx.cmd, toCamera, ctx.propertyBlock, shaderPassId: 0);
+        CoreUtils.DrawFullScreen(ctx.cmd, hologramMaterial, properties, shaderPassId: 0);
     }
 
     protected override void Cleanup()
     {
-        CoreUtils.Destroy(toCamera);
         holoObjectBuffer.Release();
         holoObjectBufferDepth.Release();
     }

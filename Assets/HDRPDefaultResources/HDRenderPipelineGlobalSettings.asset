@@ -71,7 +71,7 @@ MonoBehaviour:
   lightLayerName2: ExteriorOnly
   lightLayerName3: LampsOnly
   lightLayerName4: ReflectionsOnly
-  lightLayerName5: Light Layer 5
+  lightLayerName5: HologramLights
   lightLayerName6: Light Layer 6
   lightLayerName7: Light Layer 7
   decalLayerName0: Decal Layer default
