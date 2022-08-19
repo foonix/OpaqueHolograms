@@ -37,6 +37,25 @@ Shader "OpaqueHolograms/ApplyToCamera"
     float4x4 _EffectOrientation;
     TEXTURE2D_X(_HologramObjectBuffer);
     TEXTURE2D_X(_HologramObjectBufferDepth);
+    float _HalftoneBias;
+
+    float Epsilon = 1e-10;
+
+    float3 RGBtoHCV(in float3 RGB)
+    {
+        // Based on work by Sam Hocevar and Emil Persson
+        float4 P = (RGB.g < RGB.b) ? float4(RGB.bg, -1.0, 2.0/3.0) : float4(RGB.gb, 0.0, -1.0/3.0);
+        float4 Q = (RGB.r < P.x) ? float4(P.xyw, RGB.r) : float4(RGB.r, P.yzx);
+        float C = Q.x - min(Q.w, Q.y);
+        float H = abs((Q.w - Q.y) / (6 * C + Epsilon) + Q.z);
+        return float3(H, C, Q.x);
+    }
+    float3 RGBtoHSV(in float3 RGB)
+    {
+        float3 HCV = RGBtoHCV(RGB);
+        float S = HCV.y / (HCV.z + Epsilon);
+        return float3(HCV.x, S, HCV.z);
+    }
 
     float4 FullScreenPass(Varyings varyings) : SV_Target
     {
@@ -44,22 +63,25 @@ Shader "OpaqueHolograms/ApplyToCamera"
         float depth = LoadCameraDepth(varyings.positionCS.xy);
         PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
         float3 viewDirection = GetWorldSpaceNormalizeViewDir(posInput.positionWS);
-        float4 color = float4(0.0, 0.0, 0.0, 0.0);
-
-        // Load the camera color buffer at the mip 0 if we're not at the before rendering injection point
-        if (_CustomPassInjectionPoint != CUSTOMPASSINJECTIONPOINT_BEFORE_RENDERING)
-            color = float4(CustomPassLoadCameraColor(varyings.positionCS.xy, 0), 1);
 
         // When sampling RTHandle texture, always use _RTHandleScale.xy to scale your UVs first.
         float2 uv = posInput.positionNDC.xy * _RTHandleScale.xy;
         float4 holoObjColor = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectBuffer, s_linear_clamp_sampler, uv, 0);
         float holoDepth = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectBufferDepth, s_linear_clamp_sampler, uv, 0).r;
 
+        float holoObjectBrigtness = RGBtoHSV(holoObjColor).z;
+
         // position information for the opaque fragment in the hologram buffer.
         PositionInputs holoBufferPosInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, holoDepth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+
         // actual world space version
         float2 linesUV = mul(_EffectOrientation, GetAbsolutePositionWS(holoBufferPosInput.positionWS)).xy;
-        float4 linesTexel = SAMPLE_TEXTURE2D_LOD(_LinesTexture, sampler_LinesTexture, linesUV, 0);
+        // camera relative version
+        //float2 linesUV = mul(_EffectOrientation, holoBufferPosInput.positionWS).xy;
+        // screen coordinate version
+        //float2 linesUV = mul(_EffectOrientation, holoBufferPosInput.positionSS * holoBufferPosInput.linearDepth).xy;
+
+        float4 linesTexel = SAMPLE_TEXTURE2D(_LinesTexture, sampler_LinesTexture, linesUV);
         
         // alpha blending is used to determine if we use more of the custom pass buffer or more of the camera buffer for the fragment.
         // the alpha buffer is 1 where opaque was rendered and 0 where nothing was rendered
@@ -75,6 +97,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
         //    // debug dump stuff to red channel
         //    holoObjColor = float4(linesTexel * _LinesScale.x, 0, 0, holoObjColor.a);
         //}
+        holoObjColor.a = clamp(holoObjColor.a * holoObjectBrigtness * _HalftoneBias, 0, 1);
 
         // Fade value allow you to increase the strength of the effect while the camera gets closer to the custom pass volume
         //float f = 1 - abs(_FadeValue * 2 - 1);
@@ -88,6 +111,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
     {
         [HDR] _Tint("Color Multiplier", Color) = (.25, .5, .5, 1)
         _LinesTexture("Hologram Lines", 2D) =  "white" {}
+        _HalftoneBias("Halftone bias", Float) = 1.0
     }
 
     SubShader

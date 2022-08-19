@@ -1,7 +1,8 @@
+using Unity.Profiling;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
-using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
 
 class OpaqueHologramPass : CustomPass
 {
@@ -21,6 +22,8 @@ class OpaqueHologramPass : CustomPass
 
     RTHandle holoObjectBuffer;
     RTHandle holoObjectBufferDepth;
+
+    static readonly ProfilerMarker passTimer = new("OpaqueHologramPass");
 
     protected override void Setup(ScriptableRenderContext renderContext, CommandBuffer cmd)
     {
@@ -47,6 +50,7 @@ class OpaqueHologramPass : CustomPass
 
     protected override void Execute(CustomPassContext ctx)
     {
+        passTimer.Begin();
         // Draw objects to the buffer
         CoreUtils.SetRenderTarget(ctx.cmd, holoObjectBuffer, holoObjectBufferDepth, ClearFlag.All);
         CustomPassUtils.DrawRenderers(ctx, hologramObjectLayers,
@@ -67,6 +71,7 @@ class OpaqueHologramPass : CustomPass
         // Apply the buffer contents to the screen, doing the hologram effect at the same time.
         CoreUtils.SetRenderTarget(ctx.cmd, ctx.cameraColorBuffer, ctx.cameraDepthBuffer, ClearFlag.None);
         CoreUtils.DrawFullScreen(ctx.cmd, hologramMaterial, properties, shaderPassId: 0);
+        passTimer.End();
     }
 
     protected override void Cleanup()
