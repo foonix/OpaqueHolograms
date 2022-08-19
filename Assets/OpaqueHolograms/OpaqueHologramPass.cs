@@ -19,6 +19,7 @@ class OpaqueHologramPass : CustomPass
     public Material hologramMaterial;
     public Quaternion effectRotation = Quaternion.identity;
     public Vector3 effectScale = Vector3.one;
+    public float mipBias = 0f;
 
     RTHandle holoObjectBuffer;
     RTHandle holoObjectBufferDepth;
@@ -61,6 +62,9 @@ class OpaqueHologramPass : CustomPass
         );
 
         var orientation = Matrix4x4.TRS(Vector3.zero, effectRotation, effectScale);
+
+        var linesTexture = hologramMaterial.GetTexture("_LinesTexture");
+        linesTexture.mipMapBias = mipBias;
 
         // Set up effect properties
         var properties = new MaterialPropertyBlock();
