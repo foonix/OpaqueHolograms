@@ -37,7 +37,8 @@ Shader "OpaqueHolograms/ApplyToCamera"
     float4x4 _EffectOrientation;
     TEXTURE2D_X(_HologramObjectBuffer);
     TEXTURE2D_X(_HologramObjectBufferDepth);
-    float _HalftoneBias;
+    float4 _TextureLerp;
+    float4 _HoloBufferBrightnessLerp;
 
     float Epsilon = 1e-10;
 
@@ -85,23 +86,24 @@ Shader "OpaqueHolograms/ApplyToCamera"
         
         // alpha blending is used to determine if we use more of the custom pass buffer or more of the camera buffer for the fragment.
         // the alpha buffer is 1 where opaque was rendered and 0 where nothing was rendered
-        holoObjColor *= linesTexel * _Tint ;
+        holoObjColor *= _Tint;
+
+        float lineAlphaBiased = lerp(_TextureLerp.x, _TextureLerp.y, linesTexel.a)
+            * lerp(_HoloBufferBrightnessLerp.x, _HoloBufferBrightnessLerp.y, holoObjectBrigtness);
+        holoObjColor.a = clamp(lineAlphaBiased, 0, 1);
 
         // Depth test so that objects in the camera target are not occluded by the hologram.
         if(holoDepth <= depth)
         {
             holoObjColor = float4(0,0,0,0);
         }
-        //else
-        //{
-        //    // debug dump stuff to red channel
-        //    holoObjColor = float4(linesTexel * _LinesScale.x, 0, 0, holoObjColor.a);
-        //}
-        holoObjColor.a = clamp(holoObjColor.a * holoObjectBrigtness * _HalftoneBias, 0, 1);
+        else
+        {
+            // debug dump stuff to red channel
+            //holoObjColor = float4(linesTexel * _LinesScale.x, 0, 0, holoObjColor.a);
+            //holoObjColor = float4(holoObjectBrigtness, 0, 0, holoObjColor.a);
+        }
 
-        // Fade value allow you to increase the strength of the effect while the camera gets closer to the custom pass volume
-        //float f = 1 - abs(_FadeValue * 2 - 1);
-        //return float4(color.rgb + f, color.a);
         return holoObjColor;
     }
 
@@ -111,7 +113,8 @@ Shader "OpaqueHolograms/ApplyToCamera"
     {
         [HDR] _Tint("Color Multiplier", Color) = (.25, .5, .5, 1)
         _LinesTexture("Hologram Lines", 2D) =  "white" {}
-        _HalftoneBias("Halftone bias", Float) = 1.0
+        _TextureLerp("Texture alpha lerp", Vector) = (0, 1, 0, 0)
+        _HoloBufferBrightnessLerp("Brightness lerp", Vector) = (0, 1, 0, 0)
     }
 
     SubShader
