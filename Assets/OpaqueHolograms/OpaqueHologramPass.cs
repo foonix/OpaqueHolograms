@@ -16,15 +16,18 @@ class OpaqueHologramPass : CustomPass
     [ColorUsage(true, true)] public Color tint = Color.white;
     public GraphicsFormat colorBufferFormat = GraphicsFormat.B10G11R11_UFloatPack32;
     public DepthBits depthBits = DepthBits.Depth24;
-    public Material hologramMaterial;
+    [SerializeField] public Material hologramMaterial;
     public Quaternion effectRotation = Quaternion.identity;
     public Vector3 effectScale = Vector3.one;
     public float mipBias = 0f;
+    [Tooltip("Scroll the texture in worldspace units (meters) per second.")]
+    public Vector3 scrollVelocity = Vector3.up * 0.01f;
 
     RTHandle holoObjectBuffer;
     RTHandle holoObjectBufferDepth;
 
     static readonly ProfilerMarker passTimer = new("OpaqueHologramPass");
+    private float scrollPos = 0f;
 
     protected override void Setup(ScriptableRenderContext renderContext, CommandBuffer cmd)
     {
@@ -65,12 +68,14 @@ class OpaqueHologramPass : CustomPass
 
         var linesTexture = hologramMaterial.GetTexture("_LinesTexture");
         linesTexture.mipMapBias = mipBias;
+        scrollPos = (scrollPos + Time.smoothDeltaTime) % (1f / scrollVelocity.magnitude);
 
         // Set up effect properties
         var properties = new MaterialPropertyBlock();
         properties.SetTexture("_HologramObjectBuffer", holoObjectBuffer);
         properties.SetTexture("_HologramObjectBufferDepth", holoObjectBufferDepth);
         properties.SetMatrix("_EffectOrientation", orientation);
+        properties.SetVector("_LineOffset", Vector3.LerpUnclamped(Vector3.zero, scrollVelocity, scrollPos));
 
         // Apply the buffer contents to the screen, doing the hologram effect at the same time.
         CoreUtils.SetRenderTarget(ctx.cmd, ctx.cameraColorBuffer, ctx.cameraDepthBuffer, ClearFlag.None);

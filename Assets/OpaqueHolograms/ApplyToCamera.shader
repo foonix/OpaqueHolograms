@@ -39,6 +39,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
     TEXTURE2D_X(_HologramObjectBufferDepth);
     float4 _TextureLerp;
     float4 _HoloBufferBrightnessLerp;
+    float3 _LineOffset;
 
     float Epsilon = 1e-10;
 
@@ -76,7 +77,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
         PositionInputs holoBufferPosInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, holoDepth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
 
         // actual world space version
-        float2 linesUV = mul(_EffectOrientation, GetAbsolutePositionWS(holoBufferPosInput.positionWS)).xy;
+        float2 linesUV = (mul(_EffectOrientation, GetAbsolutePositionWS(holoBufferPosInput.positionWS+_LineOffset))).xy;
         // camera relative version
         //float2 linesUV = mul(_EffectOrientation, holoBufferPosInput.positionWS).xy;
         // screen coordinate version
