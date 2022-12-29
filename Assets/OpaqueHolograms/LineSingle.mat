@@ -252,6 +252,7 @@ Material:
     - _HoloBufferBrightnessLerp: {r: 0, g: 1, b: 0, a: 0}
     - _InvPrimScale: {r: 1, g: 1, b: 0, a: 0}
     - _IridescenceThicknessRemap: {r: 0, g: 1, b: 0, a: 0}
+    - _LineOffset: {r: 0, g: -0.48, b: 0, a: 0}
     - _LineRemap: {r: 0.1, g: 0.9, b: 0, a: 0}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
     - _TextureLerp: {r: 0, g: 1, b: 0, a: 0}
