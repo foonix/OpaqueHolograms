@@ -48,14 +48,14 @@ MonoBehaviour:
   fadeRadius: 0
   priority: 0
   customPasses:
-  - rid: 2606368468800110598
+  - rid: 6119243584045580288
   injectionPoint: 1
   m_TargetCamera: {fileID: 0}
   useTargetCamera: 0
   references:
     version: 2
     RefIds:
-    - rid: 2606368468800110598
+    - rid: 6119243584045580288
       type: {class: OpaqueHologramPass, ns: , asm: Assembly-CSharp}
       data:
         m_Name: Custom Pass
@@ -68,12 +68,27 @@ MonoBehaviour:
         effectOrientation: 1
         scanlineMinRemap: 0
         scanlineMaxRemap: 1
-        hologramObjectLayers:
-          serializedVersion: 2
-          m_Bits: 1024
-        tint: {r: 1, g: 1, b: 1, a: 1}
-        colorBufferFormat: 8
+        layerTintMappings:
+        - hologramObjectLayers:
+            serializedVersion: 2
+            m_Bits: 1024
+          tintMaterial: {fileID: 2100000, guid: eac9c66852f82f140b917f306ced4c63, type: 2}
+        - hologramObjectLayers:
+            serializedVersion: 2
+            m_Bits: 2048
+          tintMaterial: {fileID: 2100000, guid: fd73a33136f973c4ea548ad3875ba789, type: 2}
+        - hologramObjectLayers:
+            serializedVersion: 2
+            m_Bits: 4096
+          tintMaterial: {fileID: 2100000, guid: b4e5ac169100e274195fd128295016cb, type: 2}
+        - hologramObjectLayers:
+            serializedVersion: 2
+            m_Bits: 8192
+          tintMaterial: {fileID: 2100000, guid: f5d046d3e67771c49bbbc64cacd598fe, type: 2}
+        colorBufferFormat: 48
         depthBits: 16
-        hologramMaterial: {fileID: 2100000, guid: 6b8a2187732abea43936028e514d9de5, type: 2}
-        effectRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
-        effectScale: {x: 1, y: 10, z: 1}
+        hologramMaterial: {fileID: 2100000, guid: 913d9350327ce5e43b2089b89c158761, type: 2}
+        effectRotation: {x: 0, y: 0, z: 0, w: 1}
+        effectScale: {x: 1, y: 2, z: 1}
+        mipBias: 0
+        scrollVelocity: {x: 0, y: 0.1, z: 0}

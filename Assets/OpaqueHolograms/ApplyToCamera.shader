@@ -37,6 +37,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
     float4x4 _EffectOrientation;
     TEXTURE2D_X(_HologramObjectBuffer);
     TEXTURE2D_X(_HologramObjectBufferDepth);
+    TEXTURE2D_X(_HologramObjectTintBuffer);
     float4 _TextureLerp;
     float4 _HoloBufferBrightnessLerp;
     float3 _LineOffset;
@@ -87,7 +88,8 @@ Shader "OpaqueHolograms/ApplyToCamera"
         
         // alpha blending is used to determine if we use more of the custom pass buffer or more of the camera buffer for the fragment.
         // the alpha buffer is 1 where opaque was rendered and 0 where nothing was rendered
-        holoObjColor *= _Tint;
+        float4 holoObjTint = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectTintBuffer, s_linear_clamp_sampler, uv, 0);
+        holoObjColor *= _Tint * holoObjTint;
 
         float lineAlphaBiased = lerp(_TextureLerp.x, _TextureLerp.y, linesTexel.a)
             * lerp(_HoloBufferBrightnessLerp.x, _HoloBufferBrightnessLerp.y, holoObjectBrigtness);

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -8,12 +10,18 @@ class OpaqueHologramPass : CustomPass
 {
     public enum EffectOrientation { ScreenSpace, WorldSpace, ObjectSpace }
 
+    [Serializable]
+    struct LayerTentMapping
+    {
+        public LayerMask hologramObjectLayers;
+        public Material tintMaterial;
+    }
+
     [Space]
     public EffectOrientation effectOrientation = EffectOrientation.WorldSpace;
     [Range(0f, 1f)] public float scanlineMinRemap = 0f;
     [Range(0f, 1f)] public float scanlineMaxRemap = 1f;
-    public LayerMask hologramObjectLayers = 0;
-    [ColorUsage(true, true)] public Color tint = Color.white;
+    [SerializeField] List<LayerTentMapping> layerTintMappings = new List<LayerTentMapping>();
     public GraphicsFormat colorBufferFormat = GraphicsFormat.B10G11R11_UFloatPack32;
     public DepthBits depthBits = DepthBits.Depth24;
     [SerializeField] public Material hologramMaterial;
@@ -25,6 +33,7 @@ class OpaqueHologramPass : CustomPass
 
     RTHandle holoObjectBuffer;
     RTHandle holoObjectBufferDepth;
+    RTHandle holoObjectTintBuffer;
 
     static readonly ProfilerMarker passTimer = new("OpaqueHologramPass");
     private float scrollPos = 0f;
@@ -35,7 +44,6 @@ class OpaqueHologramPass : CustomPass
             Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
             colorFormat: colorBufferFormat,
             useDynamicScale: true, name: "Hologram Object Buffer"
-
         );
         holoObjectBufferDepth = RTHandles.Alloc(
             Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
@@ -43,26 +51,51 @@ class OpaqueHologramPass : CustomPass
             depthBufferBits: depthBits,
             useDynamicScale: true, name: "Hologram Object Buffer Depth"
         );
+        holoObjectTintBuffer = RTHandles.Alloc(
+            Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
+            colorFormat: colorBufferFormat,
+            useDynamicScale: true, name: "Hologram Object Tint Buffer"
+        );
     }
 
     // https://docs.unity3d.com/Packages/com.unity.render-pipelines.high-definition@15.0/manual/Custom-Pass-Troubleshooting.html#culling-issues
     protected override void AggregateCullingParameters(ref ScriptableCullingParameters cullingParameters, HDCamera camera)
     {
         // https://docs.unity3d.com/ScriptReference/Rendering.ScriptableCullingParameters.html
-        cullingParameters.cullingMask = (uint)hologramObjectLayers.value;
+        LayerMask mask = 0x0;
+        for (int i = 0; i < layerTintMappings.Count; i++)
+        {
+            mask |= layerTintMappings[i].hologramObjectLayers;
+        }
+        cullingParameters.cullingMask = (uint)mask.value;
     }
 
     protected override void Execute(CustomPassContext ctx)
     {
         passTimer.Begin();
+        // drawing "cheaply" to the tint buffer first to serve as depth prepass
+        CoreUtils.SetRenderTarget(ctx.cmd, holoObjectTintBuffer, holoObjectBufferDepth, ClearFlag.All);
+        foreach (var layer in layerTintMappings)
+        {
+            CustomPassUtils.DrawRenderers(ctx, layer.hologramObjectLayers,
+                overrideRenderState: new RenderStateBlock(RenderStateMask.Depth)
+                {
+                    depthState = new DepthState(true, CompareFunction.LessEqual),
+                },
+                overrideMaterial: layer.tintMaterial
+            );
+        }
         // Draw objects to the buffer
-        CoreUtils.SetRenderTarget(ctx.cmd, holoObjectBuffer, holoObjectBufferDepth, ClearFlag.All);
-        CustomPassUtils.DrawRenderers(ctx, hologramObjectLayers,
-            overrideRenderState: new RenderStateBlock(RenderStateMask.Depth)
-            {
-                depthState = new DepthState(true, CompareFunction.LessEqual),
-            }
-        );
+        CoreUtils.SetRenderTarget(ctx.cmd, holoObjectBuffer, holoObjectBufferDepth, ClearFlag.Color);
+        foreach (var layer in layerTintMappings)
+        {
+            CustomPassUtils.DrawRenderers(ctx, layer.hologramObjectLayers,
+                overrideRenderState: new RenderStateBlock(RenderStateMask.Depth)
+                {
+                    depthState = new DepthState(true, CompareFunction.LessEqual),
+                }
+            );
+        }
 
         var orientation = Matrix4x4.TRS(Vector3.zero, effectRotation, effectScale);
 
@@ -74,6 +107,7 @@ class OpaqueHologramPass : CustomPass
         var properties = new MaterialPropertyBlock();
         properties.SetTexture("_HologramObjectBuffer", holoObjectBuffer);
         properties.SetTexture("_HologramObjectBufferDepth", holoObjectBufferDepth);
+        properties.SetTexture("_HologramObjectTintBuffer", holoObjectTintBuffer);
         properties.SetMatrix("_EffectOrientation", orientation);
         properties.SetVector("_LineOffset", Vector3.LerpUnclamped(Vector3.zero, scrollVelocity, scrollPos));
 
@@ -87,5 +121,6 @@ class OpaqueHologramPass : CustomPass
     {
         holoObjectBuffer.Release();
         holoObjectBufferDepth.Release();
+        holoObjectTintBuffer.Release();
     }
 }
