@@ -281,6 +281,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6824669414437387814, guid: db07be6f34da19448b1ecf9ab967912e, type: 3}
+      propertyPath: managedReferences[6119243584045580288].colorBufferFormat
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: 6824669414437387815, guid: db07be6f34da19448b1ecf9ab967912e, type: 3}
       propertyPath: m_Name
       value: HologramPassVolume

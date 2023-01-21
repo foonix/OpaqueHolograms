@@ -70,9 +70,10 @@ Shader "OpaqueHolograms/ApplyToCamera"
         // When sampling RTHandle texture, always use _RTHandleScale.xy to scale your UVs first.
         float2 uv = posInput.positionNDC.xy * _RTHandleScale.xy;
         float4 holoObjColor = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectBuffer, s_linear_clamp_sampler, uv, 0);
+        float4 rawHoloObjColor = holoObjColor;
         float holoDepth = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectBufferDepth, s_linear_clamp_sampler, uv, 0).r;
 
-        float holoObjectBrigtness = RGBtoHSV(holoObjColor).z;
+        float holoObjectBrigtness = clamp(RGBtoHSV(holoObjColor).z, 0, 1);
 
         // position information for the opaque fragment in the hologram buffer.
         PositionInputs holoBufferPosInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, holoDepth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
@@ -96,7 +97,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
         holoObjColor.a = clamp(lineAlphaBiased, 0, 1);
 
         // Depth test so that objects in the camera target are not occluded by the hologram.
-        if(holoDepth <= depth)
+        if(holoDepth < depth)
         {
             holoObjColor = float4(0,0,0,0);
         }
@@ -105,6 +106,8 @@ Shader "OpaqueHolograms/ApplyToCamera"
             // debug dump stuff to red channel
             //holoObjColor = float4(linesTexel * _LinesScale.x, 0, 0, holoObjColor.a);
             //holoObjColor = float4(holoObjectBrigtness, 0, 0, holoObjColor.a);
+            //holoObjColor = holoObjTint * RGBtoHSV(rawHoloObjColor).z * linesTexel.a ;
+            holoObjColor = holoObjTint * rawHoloObjColor;
         }
 
         return holoObjColor;

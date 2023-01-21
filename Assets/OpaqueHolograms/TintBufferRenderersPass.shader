@@ -2,7 +2,7 @@ Shader "Renderers/TintBufferRenderersPass"
 {
     Properties
     {
-        _Color("Color", Color) = (1,1,1,1)
+        [HDR] _Color("Color", Color) = (1,1,1,1)
         _ColorMap("ColorMap", 2D) = "white" {}
 
         // Transparency
@@ -32,7 +32,7 @@ Shader "Renderers/TintBufferRenderersPass"
             Tags { "LightMode" = "FirstPass" }
 
             Blend Off
-            ZWrite Off
+            ZWrite On
             ZTest LEqual
 
             Cull Back
@@ -40,10 +40,11 @@ Shader "Renderers/TintBufferRenderersPass"
             HLSLPROGRAM
 
             // Toggle the alpha test
-            #define _ALPHATEST_ON
+            //#define _ALPHATEST_ON
 
             // Toggle transparency
-            // #define _SURFACE_TYPE_TRANSPARENT
+            // have to set this true to write alpha to the target.
+            #define _SURFACE_TYPE_TRANSPARENT
 
             // Toggle fog on transparent
             #define _ENABLE_FOG_ON_TRANSPARENT
@@ -57,6 +58,7 @@ Shader "Renderers/TintBufferRenderersPass"
             // List all the varyings needed in your fragment shader
             #define VARYINGS_NEED_TEXCOORD0
             #define VARYINGS_NEED_TANGENT_TO_WORLD
+            #define VARYINGS_NEED_POSITION_WS
 
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
             
@@ -85,14 +87,10 @@ CBUFFER_END
             // Put the code to render the objects in your custom pass in this function
             void GetSurfaceAndBuiltinData(FragInputs fragInputs, float3 viewDirection, inout PositionInputs posInput, out SurfaceData surfaceData, out BuiltinData builtinData)
             {
-                float2 colorMapUv = TRANSFORM_TEX(fragInputs.texCoord0.xy, _ColorMap);
-                float4 result = SAMPLE_TEXTURE2D(_ColorMap, s_trilinear_clamp_sampler, colorMapUv) * _Color;
+                float2 colorMapUv = TRANSFORM_TEX(posInput.positionWS.xy, _ColorMap);
+                float4 result = SAMPLE_TEXTURE2D(_ColorMap, s_trilinear_repeat_sampler, colorMapUv) * _Color;
                 float opacity = result.a;
                 float3 color = result.rgb;
-
-#ifdef _ALPHATEST_ON
-                DoAlphaTest(opacity, _AlphaCutoff);
-#endif
 
                 // Write back the data to the output structures
                 ZERO_BUILTIN_INITIALIZE(builtinData); // No call to InitBuiltinData as we don't have any lighting
