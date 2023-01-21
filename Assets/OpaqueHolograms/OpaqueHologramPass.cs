@@ -8,20 +8,16 @@ using UnityEngine.Rendering.HighDefinition;
 
 class OpaqueHologramPass : CustomPass
 {
-    public enum EffectOrientation { ScreenSpace, WorldSpace, ObjectSpace }
-
     [Serializable]
-    struct LayerTentMapping
+    struct LayerTintMapping
     {
         public LayerMask hologramObjectLayers;
         public Material tintMaterial;
     }
 
-    [Space]
-    public EffectOrientation effectOrientation = EffectOrientation.WorldSpace;
     [Range(0f, 1f)] public float scanlineMinRemap = 0f;
     [Range(0f, 1f)] public float scanlineMaxRemap = 1f;
-    [SerializeField] List<LayerTentMapping> layerTintMappings = new List<LayerTentMapping>();
+    [SerializeField] List<LayerTintMapping> layerTintMappings = new List<LayerTintMapping>();
     public GraphicsFormat colorBufferFormat = GraphicsFormat.B10G11R11_UFloatPack32;
     public DepthBits depthBits = DepthBits.Depth24;
     [SerializeField] public Material hologramMaterial;

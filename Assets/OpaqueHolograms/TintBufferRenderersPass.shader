@@ -8,6 +8,7 @@ Shader "Renderers/TintBufferRenderersPass"
         // Transparency
         _AlphaCutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
         [HideInInspector]_BlendMode("_BlendMode", Range(0.0, 1.0)) = 0.5
+        [KeywordEnum(WorldSpace, ObjectSpace)] _TintSpace("Hologram effect space", Float) = 0
     }
 
     HLSLINCLUDE
@@ -20,6 +21,8 @@ Shader "Renderers/TintBufferRenderersPass"
     //enable GPU instancing support
     #pragma multi_compile_instancing
     #pragma multi_compile _ DOTS_INSTANCING_ON
+
+    #pragma multi_compile _TINTSPACE_WORLDSPACE _TINTSPACE_OBJECTSPACE
 
     ENDHLSL
 
@@ -77,17 +80,27 @@ CBUFFER_END
 
             // If you need to modify the vertex datas, you can uncomment this code
             // Note: all the transformations here are done in object space
-            // #define HAVE_MESH_MODIFICATION
-            // AttributesMesh ApplyMeshModification(AttributesMesh input, float3 timeParameters)
-            // {
-            //     input.positionOS += input.normalOS * 0.0001; // inflate a bit the mesh to avoid z-fight
-            //     return input;
-            // }
+            #ifdef _TINTSPACE_OBJECTSPACE
+            #define HAVE_MESH_MODIFICATION
+            AttributesMesh ApplyMeshModification(AttributesMesh input, float3 timeParameters)
+            {
+                //input.positionOS += input.normalOS * 0.0001; // inflate a bit the mesh to avoid z-fight
+                input.uv0 = input.positionOS.xy / 1000;
+                return input;
+            }
+            #endif
 
             // Put the code to render the objects in your custom pass in this function
             void GetSurfaceAndBuiltinData(FragInputs fragInputs, float3 viewDirection, inout PositionInputs posInput, out SurfaceData surfaceData, out BuiltinData builtinData)
             {
-                float2 colorMapUv = TRANSFORM_TEX(posInput.positionWS.xy, _ColorMap);
+                #ifdef _TINTSPACE_OBJECTSPACE
+                float2 linesUv = fragInputs.texCoord0;
+                #else
+                // default world space
+                float2 linesUv = posInput.positionWS.xy;
+                #endif
+
+                float2 colorMapUv = TRANSFORM_TEX(linesUv, _ColorMap);
                 float4 result = SAMPLE_TEXTURE2D(_ColorMap, s_trilinear_repeat_sampler, colorMapUv) * _Color;
                 float opacity = result.a;
                 float3 color = result.rgb;
