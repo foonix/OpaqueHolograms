@@ -97,7 +97,7 @@ class OpaqueHologramPass : CustomPass
 
         var linesTexture = hologramMaterial.GetTexture("_LinesTexture");
         linesTexture.mipMapBias = mipBias;
-        scrollPos = (scrollPos + Time.smoothDeltaTime) % (1f / scrollVelocity.magnitude);
+        scrollPos = (scrollPos + Time.deltaTime) % (1f / scrollVelocity.magnitude); // deltaTime so it stops when paused
 
         // Set up effect properties
         var properties = new MaterialPropertyBlock();

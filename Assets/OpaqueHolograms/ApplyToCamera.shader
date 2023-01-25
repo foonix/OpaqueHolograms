@@ -90,11 +90,11 @@ Shader "OpaqueHolograms/ApplyToCamera"
         // alpha blending is used to determine if we use more of the custom pass buffer or more of the camera buffer for the fragment.
         // the alpha buffer is 1 where opaque was rendered and 0 where nothing was rendered
         float4 holoObjTint = SAMPLE_TEXTURE2D_X_LOD(_HologramObjectTintBuffer, s_linear_clamp_sampler, uv, 0);
-        holoObjColor *= _Tint * holoObjTint;
+        /*holoObjColor *= _Tint * holoObjTint;
 
         float lineAlphaBiased = lerp(_TextureLerp.x, _TextureLerp.y, linesTexel.a)
             * lerp(_HoloBufferBrightnessLerp.x, _HoloBufferBrightnessLerp.y, holoObjectBrigtness);
-        holoObjColor.a = clamp(lineAlphaBiased, 0, 1);
+        holoObjColor.a = clamp(lineAlphaBiased, 0, 1);*/
 
         // Depth test so that objects in the camera target are not occluded by the hologram.
         if(holoDepth < depth)
@@ -107,7 +107,9 @@ Shader "OpaqueHolograms/ApplyToCamera"
             //holoObjColor = float4(linesTexel * _LinesScale.x, 0, 0, holoObjColor.a);
             //holoObjColor = float4(holoObjectBrigtness, 0, 0, holoObjColor.a);
             //holoObjColor = holoObjTint * RGBtoHSV(rawHoloObjColor).z * linesTexel.a ;
-            holoObjColor = holoObjTint * rawHoloObjColor;
+            holoObjColor = float4(holoObjTint.rgb * rawHoloObjColor.rgb, holoObjTint.a);
+            // Not using alpha to blend anymore, due to soft additive (screen)
+            //holoObjColor.a *= (max(max(rawHoloObjColor.r, rawHoloObjColor.g), rawHoloObjColor.b));
         }
 
         return holoObjColor;
@@ -131,7 +133,7 @@ Shader "OpaqueHolograms/ApplyToCamera"
 
             ZWrite Off
             ZTest Off
-            Blend SrcAlpha OneMinusSrcAlpha
+            Blend OneMinusDstColor One
             Cull Off
 
             HLSLPROGRAM
