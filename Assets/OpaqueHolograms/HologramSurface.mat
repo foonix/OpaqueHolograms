@@ -71,7 +71,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _LinesTexture:
-        m_Texture: {fileID: 2800000, guid: fb7278d8f0a24214681ea49916ece08e, type: 3}
+        m_Texture: {fileID: 2800000, guid: 5ee0a8919fb85d346b4be23835c9f454, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -199,6 +199,7 @@ Material:
     - _ReceivesSSR: 1
     - _ReceivesSSRTransparent: 0
     - _RefractionModel: 0
+    - _RollBarStrength: 0.5
     - _Smoothness: 0.5
     - _SmoothnessRemapMax: 1
     - _SmoothnessRemapMin: 0
@@ -246,10 +247,12 @@ Material:
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissiveColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissiveColorLDR: {r: 0, g: 0, b: 0, a: 1}
+    - _HoloBufferBrightnessLerp: {r: 0, g: 1, b: 0, a: 0}
     - _InvPrimScale: {r: 1, g: 1, b: 0, a: 0}
     - _IridescenceThicknessRemap: {r: 0, g: 1, b: 0, a: 0}
     - _LinesScale: {r: 8, g: 8, b: 1, a: 0}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TextureLerp: {r: 0, g: 1, b: 0, a: 0}
     - _ThicknessRemap: {r: 0, g: 1, b: 0, a: 0}
     - _Tint: {r: 3.0117648, g: 13.552941, b: 47.937256, a: 0.44705883}
     - _TransmittanceColor: {r: 1, g: 1, b: 1, a: 1}
